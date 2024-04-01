@@ -59,6 +59,7 @@ import { lscpu } from "./commands/lscpu";
 import { mem } from "./commands/mem";
 import { mv } from "./commands/mv";
 import { nano } from "./commands/nano";
+import { neofetch } from "./commands/neofetch";
 import { ps } from "./commands/ps";
 import { rm } from "./commands/rm";
 import { run } from "./commands/run";
@@ -771,6 +772,7 @@ export class Terminal {
       mem: mem,
       mv: mv,
       nano: nano,
+      neofetch: neofetch,
       ps: ps,
       rm: rm,
       run: run,
