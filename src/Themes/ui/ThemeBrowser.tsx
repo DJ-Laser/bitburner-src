@@ -33,7 +33,9 @@ export function ThemeBrowser(): React.ReactElement {
   function setTheme(theme: IPredefinedTheme): void {
     previousScrollY = window.scrollY;
     const previousColors = { ...Settings.theme };
+    const prevoiusName = Settings.themeName;
     Object.assign(Settings.theme, theme.colors);
+    Settings.themeName = theme.name;
     ThemeEvents.emit();
     SnackbarEvents.emit(
       <>
@@ -44,6 +46,7 @@ export function ThemeBrowser(): React.ReactElement {
           size="small"
           onClick={() => {
             Object.assign(Settings.theme, previousColors);
+            Settings.themeName = prevoiusName;
             ThemeEvents.emit();
           }}
         >
