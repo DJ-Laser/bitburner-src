@@ -28,6 +28,7 @@ export const TerminalHelpText: string[] = [
   "    mem [script] [-t n]              Displays the amount of RAM required to run the script",
   "    mv [src] [dest]                  Move/rename a text or script file",
   "    nano [files...]                  Text editor - Open up and edit one or more scripts or text files",
+  "    neofetch                         Display information about the current server, along with some ascii art",
   "    ps                               Display all scripts that are currently running",
   "    rm [file]                        Delete a file from the server",
   "    run [script] [-t n] [--tail]     Execute a program or script",
@@ -357,6 +358,7 @@ export const HelpTexts: Record<string, string[]> = {
     " ",
   ],
   nano: TemplatedHelpTexts.scriptEditor("nano"),
+  neofetch: ["Usage: neofetch", " ", "Displays information about the current server, along with some ascii art", " "],
   ps: ["Usage: ps", " ", "Prints all scripts that are running on the current server", " "],
   rm: [
     "Usage: rm [file name]",
