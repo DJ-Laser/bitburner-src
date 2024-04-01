@@ -1,13 +1,10 @@
 name: "Deploy new pages build"
 
-env:
-  branch: neofetch
-
 on:
   workflow_dispatch:
   push:
     branches:
-      - $branch
+      - neofetch
 
 permissions:
   contents: read
@@ -27,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          ref: $branch
+          ref: neofetch
       - uses: actions/setup-node@v3
         with:
           node-version: 16
