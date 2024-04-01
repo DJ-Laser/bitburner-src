@@ -1,11 +1,12 @@
-import { setPlayer } from "@player";
-import { GoColor, GoOpponent, GoPlayType } from "@enums";
+import { Player, setPlayer } from "@player";
+import { AugmentationName, GoColor, GoOpponent, GoPlayType } from "@enums";
 import { Go } from "../../../src/Go/Go";
 import { boardStateFromSimpleBoard, simpleBoardFromBoard } from "../../../src/Go/boardAnalysis/boardAnalysis";
 import {
   cheatPlayTwoMoves,
   cheatRemoveRouter,
   cheatRepairOfflineNode,
+  cheatSuccessChance,
   getChains,
   getControlledEmptyNodes,
   getGameState,
@@ -19,12 +20,24 @@ import {
 import { PlayerObject } from "../../../src/PersonObjects/Player/PlayerObject";
 import "../../../src/Faction/Factions";
 import { getNewBoardState } from "../../../src/Go/boardState/boardState";
+import { installAugmentations } from "../../../src/Augmentation/AugmentationHelpers";
+import { AddToAllServers } from "../../../src/Server/AllServers";
+import { Server } from "../../../src/Server/Server";
+import { initSourceFiles } from "../../../src/SourceFile/SourceFiles";
 
 jest.mock("../../../src/Faction/Factions", () => ({
   Factions: {},
 }));
 
+jest.mock("../../../src/ui/GameRoot", () => ({
+  Router: {
+    page: () => ({}),
+    toPage: () => ({}),
+  },
+}));
+
 setPlayer(new PlayerObject());
+AddToAllServers(new Server({ hostname: "home" }));
 
 describe("Netscript Go API unit tests", () => {
   describe("makeMove() tests", () => {
@@ -99,20 +112,24 @@ describe("Netscript Go API unit tests", () => {
     it("should set the player's board to the requested size and opponent", () => {
       const board = ["OXX..", ".....", ".....", ".....", "..###"];
       Go.currentGame = boardStateFromSimpleBoard(board);
+      const mockLogger = jest.fn();
       const mockError = jest.fn();
 
-      const newBoard = resetBoardState(mockError, GoOpponent.SlumSnakes, 9);
+      const newBoard = resetBoardState(mockLogger, mockError, GoOpponent.SlumSnakes, 9);
 
       expect(newBoard?.[0].length).toEqual(9);
       expect(Go.currentGame.board.length).toEqual(9);
       expect(Go.currentGame.ai).toEqual(GoOpponent.SlumSnakes);
+      expect(mockError).not.toHaveBeenCalled();
+      expect(mockLogger).toHaveBeenCalledWith(`New game started: ${GoOpponent.SlumSnakes}, 9x9`);
     });
     it("should throw an error if an invalid opponent is requested", () => {
       const board = ["OXX..", ".....", ".....", ".....", "..###"];
       Go.currentGame = boardStateFromSimpleBoard(board);
+      const mockLogger = jest.fn();
       const mockError = jest.fn();
 
-      resetBoardState(mockError, GoOpponent.w0r1d_d43m0n, 9);
+      resetBoardState(mockLogger, mockError, GoOpponent.w0r1d_d43m0n, 9);
 
       expect(mockError).toHaveBeenCalledWith(
         `Invalid opponent requested (${GoOpponent.w0r1d_d43m0n}), this opponent has not yet been discovered`,
@@ -121,9 +138,10 @@ describe("Netscript Go API unit tests", () => {
     it("should throw an error if an invalid size is requested", () => {
       const board = ["OXX..", ".....", ".....", ".....", "..###"];
       Go.currentGame = boardStateFromSimpleBoard(board);
+      const mockLogger = jest.fn();
       const mockError = jest.fn();
 
-      resetBoardState(mockError, GoOpponent.TheBlackHand, 31337);
+      resetBoardState(mockLogger, mockError, GoOpponent.TheBlackHand, 31337);
 
       expect(mockError).toHaveBeenCalledWith("Invalid subnet size requested (31337), size must be 5, 7, 9, or 13");
     });
@@ -297,6 +315,29 @@ describe("Netscript Go API unit tests", () => {
       await cheatRepairOfflineNode(mockLogger, 4, 4, 0, 0);
       expect(mockLogger).toHaveBeenCalledWith("Cheat successful. The point 4,4 was repaired.");
       expect(Go.currentGame.board[4]?.[4]?.color).toEqual(GoColor.empty);
+    });
+  });
+
+  describe("Cheat success chance unit tests", () => {
+    it("should have a base chance", () => {
+      expect(cheatSuccessChance(0)).toEqual(0.6);
+    });
+
+    it("should have a scaled chance based on cheat count", () => {
+      expect(cheatSuccessChance(4)).toEqual(0.6 * (0.7 - 0.08) ** 4);
+    });
+
+    it("should have a scaled chance based on layer cheat success level", () => {
+      Player.setBitNodeNumber(13);
+      initSourceFiles();
+      Player.queueAugmentation(AugmentationName.BrachiBlades);
+      Player.queueAugmentation(AugmentationName.GrapheneBrachiBlades);
+      Player.queueAugmentation(AugmentationName.INFRARet);
+      Player.queueAugmentation(AugmentationName.PCMatrix);
+      Player.queueAugmentation(AugmentationName.NeuroFluxGovernor);
+      installAugmentations();
+
+      expect(cheatSuccessChance(4)).toEqual(0.6 * (0.7 - 0.08) ** 4 * Player.mults.crime_success);
     });
   });
 });

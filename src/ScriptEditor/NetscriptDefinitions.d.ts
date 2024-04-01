@@ -1034,7 +1034,12 @@ type SleeveFactionTask = {
 };
 
 /** @public */
-type SleeveInfiltrateTask = { type: "INFILTRATE"; cyclesWorked: number; cyclesNeeded: number };
+type SleeveInfiltrateTask = {
+  type: "INFILTRATE";
+  cyclesWorked: number;
+  cyclesNeeded: number;
+  nextCompletion: Promise<void>;
+};
 
 /** @public */
 type SleeveRecoveryTask = { type: "RECOVERY" };
@@ -2073,6 +2078,20 @@ export interface Singularity {
   getFactionInviteRequirements(faction: string): PlayerRequirement[];
 
   /**
+   * Get a list of enemies of a faction.
+   * @remarks
+   * RAM cost: 3 GB * 16/4/1
+   *
+   *
+   * Returns an array containing the names (as strings) of all factions
+   * that are enemies of the specified faction.
+   *
+   * @param faction - Name of faction.
+   * @returns Array containing the names of all enemies of the faction.
+   */
+  getFactionEnemies(faction: string): string[];
+
+  /**
    * List all current faction invitations.
    * @remarks
    * RAM cost: 3 GB * 16/4/1
@@ -2196,16 +2215,16 @@ export interface Singularity {
    * This function returns true if you successfully start working on the specified program, and false otherwise.
    *
    * Note that creating a program using this function has the same hacking level requirements as it normally would.
-   * These level requirements are:
-   * * BruteSSH.exe: 50
-   * * FTPCrack.exe: 100
-   * * relaySMTP.exe: 250
-   * * HTTPWorm.exe: 500
-   * * SQLInject.exe: 750
-   * * DeepscanV1.exe: 75
-   * * DeepscanV2.exe: 400
-   * * ServerProfiler.exe: 75
-   * * AutoLink.exe: 25
+   * These level requirements are:<br/>
+   * - BruteSSH.exe: 50<br/>
+   * - FTPCrack.exe: 100<br/>
+   * - relaySMTP.exe: 250<br/>
+   * - HTTPWorm.exe: 500<br/>
+   * - SQLInject.exe: 750<br/>
+   * - DeepscanV1.exe: 75<br/>
+   * - DeepscanV2.exe: 400<br/>
+   * - ServerProfiler.exe: 75<br/>
+   * - AutoLink.exe: 25
    *
    * @example
    * ```js
@@ -3921,7 +3940,14 @@ export interface Gang {
 }
 
 /** @public */
-type GoOpponent = "Netburners" | "Slum Snakes" | "The Black Hand" | "Tetrads" | "Daedalus" | "Illuminati";
+type GoOpponent =
+  | "Netburners"
+  | "Slum Snakes"
+  | "The Black Hand"
+  | "Tetrads"
+  | "Daedalus"
+  | "Illuminati"
+  | "????????????";
 
 /**
  * IPvGO api
@@ -3988,15 +4014,13 @@ export interface Go {
    *
    * For example, a 5x5 board might look like this:
    *
-   *  <pre lang="javascript">
-   *    [
-   *       "XX.O.",
-   *       "X..OO",
-   *       ".XO..",
-   *       "XXO.#",
-   *       ".XO.#",
-   *    ]
-   * </pre>
+   [<br/>  
+      "XX.O.",<br/>  
+      "X..OO",<br/>  
+      ".XO..",<br/>  
+      "XXO.#",<br/>  
+      ".XO.#",<br/>  
+   ]
    *
    * Each string represents a vertical column on the board, and each character in the string represents a point.
    *
@@ -4032,7 +4056,7 @@ export interface Go {
   /**
    * Returns the name of the opponent faction in the current subnet.
    */
-  getOpponent(): GoOpponent | "No AI" | "????????????";
+  getOpponent(): GoOpponent | "No AI";
 
   /**
    * Gets new IPvGO subnet with the specified size owned by the listed faction, ready for the player to make a move.
@@ -4041,7 +4065,7 @@ export interface Go {
    *
    * Note that some factions will have a few routers on the subnet at this state.
    *
-   * opponent is "Netburners" or "Slum Snakes" or "The Black Hand" or "Daedalus" or "Illuminati",
+   * opponent is "Netburners" or "Slum Snakes" or "The Black Hand" or "Tetrads" or "Daedalus" or "Illuminati" or "????????????",
    *
    * @returns a simplified version of the board state as an array of strings representing the board columns. See ns.Go.getBoardState() for full details
    *
@@ -4681,11 +4705,20 @@ interface HackingFormulas {
    */
   hackPercent(server: Server, player: Person): number;
   /**
-   * Calculate the percent a server would grow to.
-   * Not exact due to limitations of mathematics.
-   * (Ex: 3.0 would grow the server to 300% of its current value.)
+   * Calculate the growth multiplier constant for a given server and threads.
+   *
+   * The actual amount of money grown depends both linearly *and* exponentially on threads;
+   * this is only giving the exponential part that is used for the multiplier.
+   * See {@link NS.grow | grow} for more details.
+   *
+   * As a result of the above, this multiplier does *not* depend on the amount of money on the server.
+   * Changing server.moneyAvailable and server.moneyMax will have no effect.
+   *
+   * For the most common use-cases, you probably want
+   * either {@link HackingFormulas.growThreads | formulas.hacking.growThreads}
+   * or {@link HackingFormulas.growAmount | formulas.hacking.growAmount} instead.
    * @param server - Server info, typically from {@link NS.getServer | getServer}
-   * @param threads - Amount of thread.
+   * @param threads - Amount of threads. Can be fractional.
    * @param player - Player info, typically from {@link NS.getPlayer | getPlayer}
    * @param cores - Number of cores on the computer that will execute grow.
    * @returns The calculated grow percent.
@@ -4693,6 +4726,13 @@ interface HackingFormulas {
   growPercent(server: Server, threads: number, player: Person, cores?: number): number;
   /**
    * Calculate how many threads it will take to grow server to targetMoney. Starting money is server.moneyAvailable.
+   * Note that when simulating the effect of {@link NS.grow | grow}, what matters is the state of the server and player
+   * when the grow *finishes*, not when it is started.
+   *
+   * The growth amount depends both linearly *and* exponentially on threads; see {@link NS.grow | grow} for more details.
+   *
+   * The inverse of this function is {@link HackingFormulas.growAmount | formulas.hacking.growAmount},
+   * although it can work with fractional threads.
    * @param server - Server info, typically from {@link NS.getServer | getServer}
    * @param player - Player info, typically from {@link NS.getPlayer | getPlayer}
    * @param targetMoney - Desired final money, capped to server's moneyMax
@@ -4700,6 +4740,22 @@ interface HackingFormulas {
    * @returns The calculated grow threads as an integer, rounded up.
    */
   growThreads(server: Server, player: Person, targetMoney: number, cores?: number): number;
+  /**
+   * Calculate the amount of money a grow action will leave a server with. Starting money is server.moneyAvailable.
+   * Note that when simulating the effect of {@link NS.grow | grow}, what matters is the state of the server and player
+   * when the grow *finishes*, not when it is started.
+   *
+   * The growth amount depends both linearly *and* exponentially on threads; see {@link NS.grow | grow} for more details.
+   *
+   * The inverse of this function is {@link HackingFormulas.growThreads | formulas.hacking.growThreads},
+   * although it rounds up to integer threads.
+   * @param server - Server info, typically from {@link NS.getServer | getServer}
+   * @param player - Player info, typically from {@link NS.getPlayer | getPlayer}
+   * @param threads - Number of threads to grow with. Can be fractional.
+   * @param cores - Number of cores on the computer that will execute grow.
+   * @returns The amount of money after the calculated grow.
+   */
+  growAmount(server: Server, player: Person, threads: number, cores?: number): number;
   /**
    * Calculate hack time.
    * @param server - Server info, typically from {@link NS.getServer | getServer}
@@ -5362,7 +5418,11 @@ export interface NS {
    * multiplicative portion of server growth.
    *
    * To determine the effect of a single grow, obtain access to the Formulas API and use
-   * {@link HackingFormulas.growPercent | formulas.hacking.growPercent}, or invert {@link NS.growthAnalyze | growthAnalyze}.
+   * {@link HackingFormulas.growAmount | formulas.hacking.growPercent}, or invert {@link NS.growthAnalyze | growthAnalyze}.
+   *
+   * To determine how many threads are needed to return a server to max money, obtain access to the Formulas API and use
+   * {@link HackingFormulas.growThreads | formulas.hacking.growThreads}, or {@link NS.growthAnalyze} *if* the server will
+   * be at the same security in the future.
    *
    * Like {@link NS.hack | hack}, `grow` can be called on any hackable server, regardless of where the script is
    * running. Hackable servers are any servers not owned by the player.
@@ -6311,7 +6371,7 @@ export interface NS {
    * ```js
    * const mults = ns.getHackingMultipliers();
    * print(`chance: ${mults.chance}`);
-   * print(`growthL ${mults.growth}`);
+   * print(`growth: ${mults.growth}`);
    * ```
    * @returns Object containing the Player’s hacking related multipliers.
    */

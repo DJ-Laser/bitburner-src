@@ -336,7 +336,12 @@ function logEndGame(logger: (s: string) => void) {
 /**
  * Clears the board, resets winstreak if applicable
  */
-export function resetBoardState(error: (s: string) => void, opponent: GoOpponent, boardSize: number) {
+export function resetBoardState(
+  logger: (s: string) => void,
+  error: (s: string) => void,
+  opponent: GoOpponent,
+  boardSize: number,
+) {
   if (![5, 7, 9, 13].includes(boardSize) && opponent !== GoOpponent.w0r1d_d43m0n) {
     error(`Invalid subnet size requested (${boardSize}), size must be 5, 7, 9, or 13`);
     return;
@@ -354,6 +359,7 @@ export function resetBoardState(error: (s: string) => void, opponent: GoOpponent
 
   Go.currentGame = getNewBoardState(boardSize, opponent, true);
   GoEvents.emit(); // Trigger a Go UI rerender
+  logger(`New game started: ${opponent}, ${boardSize}x${boardSize}`);
   return simpleBoardFromBoard(Go.currentGame.board);
 }
 
@@ -392,7 +398,7 @@ export async function determineCheatSuccess(
   // If there have been prior cheat attempts, and the cheat fails, there is a 10% chance of instantly losing
   else if (state.cheatCount && (ejectRngOverride ?? rng.random()) < 0.1) {
     logger(`Cheat failed! You have been ejected from the subnet.`);
-    resetBoardState(logger, state.ai, state.board[0].length);
+    resetBoardState(logger, logger, state.ai, state.board[0].length);
     return {
       type: GoPlayType.gameOver,
       x: null,
@@ -410,10 +416,25 @@ export async function determineCheatSuccess(
 
 /**
  * Cheating success rate scales with player's crime success rate, and decreases with prior cheat attempts.
+ *
+ * The source file bonus is additive success chance on top of the other multipliers.
+ *
+ * Cheat success chance required for N cheats with 100% success rate in a game:
+ *
+ * 1 100% success rate cheat requires +66% increased crime success rate
+ * 2 100% success cheats: +145% increased crime success rate
+ * 3: +282%
+ * 4: +535%
+ * 5: +1027%
+ * 7: +4278%
+ * 10: +59,854%
+ * 12: +534,704%
+ * 15: +31,358,645%
  */
 export function cheatSuccessChance(cheatCount: number) {
-  const sourceFileBonus = Player.sourceFileLvl(14) === 3 ? 1.25 : 1;
-  return Math.min(0.6 * 0.65 ** cheatCount * Player.mults.crime_success * sourceFileBonus, 1);
+  const sourceFileBonus = Player.sourceFileLvl(14) === 3 ? 0.25 : 0;
+  const cheatCountScalar = (0.7 - 0.02 * cheatCount) ** cheatCount;
+  return Math.max(Math.min(0.6 * cheatCountScalar * Player.mults.crime_success + sourceFileBonus, 1), 0);
 }
 
 /**
