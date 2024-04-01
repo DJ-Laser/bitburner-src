@@ -2,6 +2,9 @@ name: "Deploy new pages build"
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - neofetch
 
 permissions:
   contents: read
