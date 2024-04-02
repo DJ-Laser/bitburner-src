@@ -41,6 +41,7 @@ const gameCommands = [
   "mem",
   "mv",
   "nano",
+  "neofetch",
   "ps",
   "rm",
   "run",
