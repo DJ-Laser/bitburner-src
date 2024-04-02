@@ -1,6 +1,5 @@
 import { Terminal } from "../../Terminal";
 import { CONSTANTS } from "../../Constants";
-import { Settings } from "../../Settings/Settings";
 import { BaseServer } from "../../Server/BaseServer";
 import { formatRam } from "../../ui/formatNumber";
 
@@ -12,9 +11,8 @@ export function neofetch(_args: (string | number | boolean)[], server: BaseServe
     `OS: BitOS`,
     `Packages: 284 (pkgman) ${numPrograms !== 0 ? `${numPrograms} (prgm)` : ""}`,
     `Shell: BitShell ${CONSTANTS.VersionString}`,
-    `Theme: ${Settings.themeName}`,
     `CPU: Unknown (${server.cpuCores} Cores)`,
-    `Memory: ${formatRam(server.ramUsed)} / ${formatRam(server.maxRam)}`
+    `Memory: ${formatRam(server.ramUsed)} / ${formatRam(server.maxRam)}`,
   ];
   info.forEach((line) => Terminal.print(line));
 }

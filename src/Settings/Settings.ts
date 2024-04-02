@@ -76,8 +76,6 @@ export const Settings = {
   TailRenderInterval: 1000,
   /** Theme colors. */
   theme: { ...defaultTheme },
-  /** Theme Name (needed for neofetch) */
-  themeName: "Default",
   /** Interface styles. */
   styles: { ...defaultStyles },
   /** Character overview settings. */

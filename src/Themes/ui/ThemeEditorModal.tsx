@@ -76,7 +76,6 @@ export function ThemeEditorModal(props: IProps): React.ReactElement {
   function setTheme(theme: UserInterfaceTheme): void {
     setCustomTheme(theme);
     Object.assign(Settings.theme, theme);
-    Settings.themeName = "Custom";
     ThemeEvents.emit();
   }
 
