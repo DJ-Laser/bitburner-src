@@ -3,7 +3,7 @@ import { CONSTANTS } from "../../Constants";
 import { BaseServer } from "../../Server/BaseServer";
 import { Player } from "@player";
 import { formatRam } from "../../ui/formatNumber";
-import { SpecialServers } from "src/Server/data/SpecialServers";
+import { SpecialServers } from "../../Server/data/SpecialServers";
 
 /**
  * List the number of packages allong with the package manager name
