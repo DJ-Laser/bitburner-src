@@ -32,7 +32,29 @@ export function neofetch(_args: (string | number | boolean)[], server: BaseServe
     `CPU: Unknown (${server.cpuCores} Cores)`,
     `Memory: ${formatRam(server.ramUsed)} / ${formatRam(server.maxRam)}`,
   ];
-  info.forEach((line) => Terminal.print(line));
+  const asciiArt = defaultServerArt;
+  const artWidth = asciiArt[0].length;
+  for (let i = 0; i < Math.max(asciiArt.length, info.length); i++) {
+    // Ensure Info is at correct indentation even if art is shorter than info
+    const artLine = asciiArt[i] ?? " ".repeat(artWidth);
+    Terminal.print(`${artLine}  ${info[i] ?? ""}`);
+  }
   Terminal.print(" ");
   // Print Theme colors
 }
+
+// TODO: Make better art
+const defaultServerArt = [
+  "____________________",
+  "|__________________|",
+  "|                  |",
+  "|  [x]  [___]  O   |",
+  "|__________________|",
+
+  "____________________",
+  "|__________________|",
+  "|                  |",
+  "|  o  --    [__]   |",
+  "|   []  [_]  o  o  |",
+  "|__________________|",
+] as const;
